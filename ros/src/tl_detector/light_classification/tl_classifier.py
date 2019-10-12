@@ -39,10 +39,13 @@ class TLClassifier(object):
         
         self.dg = tf.Graph()
 
+        #self.model_fn = "frozen_inference_graph.pb"
+        self.model_fn = "frozen_inference_graph_aakarsh_01.pb"
+
         pwd = os.path.dirname(os.path.realpath(__file__))
         with self.dg.as_default():
             gdef = tf.GraphDef()
-            with open(pwd+"/models/frozen_inference_graph.pb", 'rb') as f:
+            with open(pwd+"/models/"+ self.model_fn, 'rb') as f:
                 gdef.ParseFromString(f.read())
                 tf.import_graph_def(gdef, name="")
 
@@ -71,11 +74,11 @@ class TLClassifier(object):
             detection_scores = np.squeeze(detection_scores)
 
             ret = []
-            detection_threshold = 0.3
+            detection_threshold = 0.5
 
             # Traffic signals are labelled 10 in COCO
             for idx, cl in enumerate(detection_classes.tolist()):
-                if cl == 10:
+                #if cl == 10:
                     if detection_scores[idx] < detection_threshold:
                         continue
                     dim = image.shape[0:2]
@@ -85,18 +88,53 @@ class TLClassifier(object):
                     if box_h / box_w < 1.6:
                         continue
                     #print('detected bounding box: {} conf: {}'.format(box, detection_scores[idx]))
-                    ret.append(box)
+                    ret.append([box,cl])
         return ret
 
     def mark_up(self,boxes,image):
 
-        for box in boxes:
+        for det in boxes:
+            box,cl = det
             bb = to_bb(box)
             draw_bb(image,bb,col=(255,0,0),th=2)
 
         return image   
 
-    def get_classification(self,boxes,img):
+    def get_classification(self,boxes):
+
+        # 1: Green
+        # 2: Yellow
+        # 3: Red
+
+        cl_count = {}
+
+        if len(boxes) <= 0:
+            return TrafficLight.UNKNOWN
+
+        for det in boxes:
+            box,cl = det
+            cl_count[cl] += 1
+
+        best_cl = -1
+        max_ct = -1
+
+        for k in cl_count:
+            if cl_count[k]  > max_ct:
+                max_ct = cl_count[k]
+                best_cl = k
+
+        if best_cl == 1:
+            return TrafficLight.GREEN
+        elif best_cl == 2:
+            return TrafficLight.YELLOW
+        elif best_cl == 3:
+            return TrafficLight.RED
+        else:
+            rospy.logerr("best cl is unknown %s",best_cl)
+            return TrafficLight.UNKNOWN
+
+
+    def get_classification_nikhil(self,boxes,img):
         """Determines the color of the traffic light in the image
 
         Args:
