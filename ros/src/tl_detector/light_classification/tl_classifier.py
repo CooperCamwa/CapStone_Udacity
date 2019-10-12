@@ -39,8 +39,8 @@ class TLClassifier(object):
         
         self.dg = tf.Graph()
 
-        #self.model_fn = "frozen_inference_graph.pb"
-        self.model_fn = "frozen_inference_graph_aakarsh_01.pb"
+        self.model_fn = "frozen_inference_graph.pb"
+        #self.model_fn = "frozen_inference_graph_aakarsh_01.pb"
 
         pwd = os.path.dirname(os.path.realpath(__file__))
         with self.dg.as_default():
@@ -78,7 +78,7 @@ class TLClassifier(object):
 
             # Traffic signals are labelled 10 in COCO
             for idx, cl in enumerate(detection_classes.tolist()):
-                #if cl == 10:
+                if cl == 10:
                     if detection_scores[idx] < detection_threshold:
                         continue
                     dim = image.shape[0:2]
@@ -162,7 +162,8 @@ class TLClassifier(object):
             rospy.logerr("Couldn't locate lights")
             return TrafficLight.UNKNOWN
         i = 0
-        for box in boxes:
+        for det in boxes:
+            box,cl = det
             class_image = cv2.resize(img[box[0]:box[2], box[1]:box[3]], (32, 32))
             # The green needs to be checked first since red appears in many other components
             # For example traffice signs / other colors
