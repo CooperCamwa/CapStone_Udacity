@@ -190,7 +190,7 @@ class TLDetector(object):
                 #cv_image = cv_image[:, :, ::-1]
 
                 boxes = self.light_classifier.detect_regions(cv_image)
-                cl_state = self.light_classifier.get_classification(boxes,cv_image)
+                cl_state = self.light_classifier.get_classification(boxes)
 
                 if len(boxes) > 0:
                     img = self.light_classifier.mark_up(boxes,cv_image)

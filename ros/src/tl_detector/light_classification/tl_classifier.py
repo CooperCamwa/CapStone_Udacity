@@ -113,7 +113,10 @@ class TLClassifier(object):
 
         for det in boxes:
             box,cl = det
-            cl_count[cl] += 1
+            if cl in cl_count:
+                cl_count[cl] += 1
+            else:     
+                cl_count[cl] = 0
 
         best_cl = -1
         max_ct = -1
