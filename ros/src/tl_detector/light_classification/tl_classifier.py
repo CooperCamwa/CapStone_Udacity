@@ -88,7 +88,7 @@ class TLClassifier(object):
                     if box_h / box_w < 1.6:
                         continue
                     #print('detected bounding box: {} conf: {}'.format(box, detection_scores[idx]))
-                    ret.append([box,cl])
+                    ret.append(box)
         return ret
 
     def mark_up(self,boxes,image):
@@ -104,10 +104,12 @@ class TLClassifier(object):
                 draw_bb(image,bb,col=(255,255,0),th=4)
             elif cl == 3: 
                 draw_bb(image,bb,col=(0,0,255),th=4)
+            else: 
+                draw_bb(image,bb,col=(255,255,255),th=4)
 
         return image   
 
-    def get_classification(self,boxes):
+    def vote(self,detections):
 
         # 1: Green
         # 2: Yellow
@@ -118,7 +120,7 @@ class TLClassifier(object):
         if len(boxes) <= 0:
             return TrafficLight.UNKNOWN
 
-        for det in boxes:
+        for det in detections:
             box,cl = det
             if cl in cl_count:
                 cl_count[cl] += 1
@@ -143,6 +145,32 @@ class TLClassifier(object):
             rospy.logerr("best cl is unknown %s",best_cl)
             return TrafficLight.UNKNOWN
 
+    def patch_classifier(box,img):
+
+        class_image = cv2.resize(img[box[0]:box[2], box[1]:box[3]], (32, 32))
+            # The green needs to be checked first since red appears in many other components
+            # For example traffice signs / other colors
+        ret_green, thresh_green = cv2.threshold(class_image[:, :, 1], 170, 255, cv2.THRESH_BINARY)
+        green_count = cv2.countNonZero(thresh_green)
+        #print('green_count', green_count)
+        box_h, box_w = (box[2] - box[0], box[3] - box[1])
+        img_size = 32 * 32
+        #print('img_size', 32 * 32)
+
+        ret_red, thresh_red = cv2.threshold(class_image[:, :, 0], 170, 255, cv2.THRESH_BINARY)
+        red_count = cv2.countNonZero(thresh_red)
+        #print('red_count', red_count)
+        #if green_count < 0.1 * img_size and red_count < 0.1 * img_size:
+        #    rospy.logerr('YELLOW')
+        #    return TrafficLight.YELLOW
+        #else:
+        if red_count > green_count:
+            rospy.logerr('RED')
+            return TrafficLight.RED
+        else:
+            rospy.logerr('GREEN')
+            return TrafficLight.GREEN
+
 
     def get_classification_nikhil(self,boxes,img):
         """Determines the color of the traffic light in the image
@@ -162,20 +190,9 @@ class TLClassifier(object):
             rospy.logerr("Couldn't locate lights")
             return TrafficLight.UNKNOWN
         i = 0
+
         for det in boxes:
-            box,cl = det
-            class_image = cv2.resize(img[box[0]:box[2], box[1]:box[3]], (32, 32))
-            # The green needs to be checked first since red appears in many other components
-            # For example traffice signs / other colors
-            ret, thresh = cv2.threshold(class_image[:, :, 2], 160, 255, cv2.THRESH_BINARY)
-            count = cv2.countNonZero(thresh)
-            if count > 100:
-                return TrafficLight.GREEN
-            else:
-                ret, thresh = cv2.threshold(class_image[:, :, 0], 160, 255, cv2.THRESH_BINARY)
-                count = cv2.countNonZero(thresh)
-                if count > 100:
-                    rospy.logerr('RED')
-                    return TrafficLight.RED
-                else:
-                    return TrafficLight.YELLOW
+            
+
+
+        return TrafficLight.UNKNOWN            

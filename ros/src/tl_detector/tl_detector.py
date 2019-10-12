@@ -193,7 +193,7 @@ class TLDetector(object):
 
             boxes = self.light_classifier.detect_regions(cv_image)
             #cl_state = self.light_classifier.get_classification(boxes)
-            cl_state = self.light_classifier.get_classification_nikhil(boxes,img)
+            cl_state = self.light_classifier.get_classification_nikhil(boxes,cv_image)
 
             if len(boxes) > 0:
                 img = self.light_classifier.mark_up(boxes,cv_image)
