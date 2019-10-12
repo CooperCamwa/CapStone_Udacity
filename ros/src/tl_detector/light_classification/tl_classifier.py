@@ -5,6 +5,34 @@ import numpy as np
 import os
 import rospy
 
+def to_bb(box):
+
+    bb = {}
+
+    bb["y0"] = box[0] 
+    bb["x0"] = box[1] 
+    bb["y1"] = box[2] 
+    bb["x1"] = box[3]
+
+    return bb
+         
+    #  box = [int(box[0] * dim[0]), int(box[1] * dim[1]), int(box[2] * dim[0]), int(box[3] * dim[1])]
+    #                 box_h, box_w = (box[2] - box[0], box[3] - box[1])
+                   
+def draw_bb(frame,bb,col=(255,0,0),th=2):
+
+    x0 = int(bb["x0"])
+    x1 = int(bb["x1"])
+    y0 = int(bb["y0"])
+    y1 = int(bb["y1"])
+
+    frame = cv2.line(frame, (x0,y0),(x1,y0),col, th)
+    frame = cv2.line(frame, (x0,y1),(x1,y1),col, th)
+    frame = cv2.line(frame, (x0,y0),(x0,y1),col, th)
+    frame = cv2.line(frame, (x1,y0),(x1,y1),col, th)
+
+    return frame
+
 class TLClassifier(object):
     def __init__(self):
         
@@ -26,9 +54,11 @@ class TLClassifier(object):
             self.detection_classes = self.dg.get_tensor_by_name('detection_classes:0')
             self.num_detections = self.dg.get_tensor_by_name('num_detections:0')  
 
-    def get_boxes(self, image):
+    def detect_regions(self, image):
+
         with self.dg.as_default():
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
             tf_image_input = np.expand_dims(image, axis=0)
 
@@ -58,7 +88,15 @@ class TLClassifier(object):
                     ret.append(box)
         return ret
 
-    def get_classification(self, image):
+    def mark_up(self,boxes,image):
+
+        for box in boxes:
+            bb = to_bb(box)
+            draw_bb(image,bb,col=(255,0,0),th=2)
+
+        return image   
+
+    def get_classification(self,boxes,img):
         """Determines the color of the traffic light in the image
 
         Args:
@@ -69,9 +107,8 @@ class TLClassifier(object):
 
         """
 
-        boxes = self.get_boxes(image)
         #rospy.logerr("got image")
-        img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        #img = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
         if boxes is None:
             rospy.logerr("Couldn't locate lights")

@@ -10,6 +10,9 @@ from light_classification.tl_classifier import TLClassifier
 import tf
 import cv2
 import yaml
+import calendar
+import time
+import os
 
 from scipy import spatial
 
@@ -40,7 +43,7 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
         
-        self.debug = True
+        self.debug = False
 
         self.bridge = CvBridge()
         self.light_classifier = TLClassifier()
@@ -48,6 +51,8 @@ class TLDetector(object):
         
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
+
+        self.frame_count = 0
 
         # not sure this usage is correct - so leave this out for now
 #         rospy.wait_for_message('/base_waypoints', Lane)
@@ -130,6 +135,8 @@ class TLDetector(object):
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
 
+        self.frame_count += 1
+
     def get_closest_waypoint(self,x,y):
         
         """Identifies the closest path waypoint to the given position
@@ -159,22 +166,37 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+
+
         
         if self.debug:
             return light.state
         
         else:
+
+            cl_state = TrafficLight.UNKNOWN
             
             if self.has_image is False or self.camera_image is None:
                 self.prev_light_loc = None
-                return TrafficLight.UNKNOWN
+                return cl_state
             
             if self.light_classifier is None:
-                return TrafficLight.UNKNOWN
+                return cl_state
 
-            # use computer vision to detect traffic light and it's state
-            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-            return self.light_classifier.get_classification(cv_image)
+            if (self.frame_count % 5) == 0:    
+
+                # use computer vision to detect traffic light and it's state
+                cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+                #cv_image = cv_image[:, :, ::-1]
+
+                boxes = self.light_classifier.detect_regions(cv_image)
+                cl_state = self.light_classifier.get_classification(boxes,cv_image)
+
+                if len(boxes) > 0:
+                    img = self.light_classifier.mark_up(boxes,cv_image)
+                    self.__create_training_data(cl_state,img)
+
+            return cl_state
 
     def process_traffic_lights(self):
         
@@ -236,16 +258,21 @@ class TLDetector(object):
             return "GREEN"
         return "UNKNOWN"
     
-    def __create_training_data(self, state):
-        f_name = "sim_tl_{}_{}.jpg".format(calendar.timegm(time.gmtime()), self.light_label(state))
-        dir = './data/train/sim'
+    def __create_training_data(self, state, image):
+
+        f_name = "sim_tl_{}_{}.jpg".format(calendar.timegm(time.gmtime()), self.__light_label(state))
+        dir = 'data/ssd'
 
         if not os.path.exists(dir):
             os.makedirs(dir)
 
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image)
-        cv_image = cv_image[:, :, ::-1]
-        cv2.imwrite('{}/{}'.format(dir, f_name), cv_image)
+        fn = '{}/{}'.format(dir, f_name)    
+
+        # cv_image = self.bridge.imgmsg_to_cv2(self.camera_image)
+        # cv_image = cv_image[:, :, ::-1]
+
+        print("saving to: ",fn)
+        cv2.imwrite(fn,image)
         
 
 if __name__ == '__main__':
