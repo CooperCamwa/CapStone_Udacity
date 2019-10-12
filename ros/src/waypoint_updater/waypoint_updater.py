@@ -109,7 +109,7 @@ class WaypointUpdater(object):
         lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx+LOOKAHEAD_WPS]
           
         if sl_idx >= 0 and sl_idx < size:
-            #rospy.logerr("decelerate waypoint")
+            rospy.logerr("decelerate waypoint")
             lane.waypoints = self.decelerate_waypoints(closest_idx,lane.waypoints)    
    
         self.final_waypoints_pub.publish(lane)

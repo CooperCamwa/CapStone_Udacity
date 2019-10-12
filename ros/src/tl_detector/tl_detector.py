@@ -110,32 +110,34 @@ class TLDetector(object):
         
         self.has_image = True
         self.camera_image = msg
-    
-        light_wp, state = self.process_traffic_lights()
+
+        if self.frame_count % 5 == 0:
         
-#         rospy.logerr("state: %s",state)
-#         rospy.logerr("wp: %s",light_wp)
+            light_wp, state = self.process_traffic_lights()
+            
+    #         rospy.logerr("state: %s",state)
+    #         rospy.logerr("wp: %s",light_wp)
 
-        '''
-        Publish upcoming red lights at camera frequency.
-        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        of times till we start using it. Otherwise the previous stable state is
-        used.
-        '''
+            '''
+            Publish upcoming red lights at camera frequency.
+            Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+            of times till we start using it. Otherwise the previous stable state is
+            used.
+            '''
 
-        #self.state = state
+            #self.state = state
 
-        if self.state != state:
-            self.state_count = 0
-            self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
-        else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-        self.state_count += 1
+            if self.state != state:
+                self.state_count = 0
+                self.state = state
+            elif self.state_count >= STATE_COUNT_THRESHOLD:
+                self.last_state = self.state
+                light_wp = light_wp if state == TrafficLight.RED else -1
+                self.last_wp = light_wp
+                self.upcoming_red_light_pub.publish(Int32(light_wp))
+            else:
+                self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            self.state_count += 1
 
         self.frame_count += 1
 
@@ -185,18 +187,16 @@ class TLDetector(object):
             if self.light_classifier is None:
                 return cl_state
 
-            if (self.frame_count % 5) == 0:    
+            # use computer vision to detect traffic light and it's state
+            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+            #cv_image = cv_image[:, :, ::-1]
 
-                # use computer vision to detect traffic light and it's state
-                cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-                #cv_image = cv_image[:, :, ::-1]
+            boxes = self.light_classifier.detect_regions(cv_image)
+            cl_state = self.light_classifier.get_classification(boxes)
 
-                boxes = self.light_classifier.detect_regions(cv_image)
-                cl_state = self.light_classifier.get_classification(boxes)
-
-                if len(boxes) > 0:
-                    img = self.light_classifier.mark_up(boxes,cv_image)
-                    self.__create_training_data(cl_state,img)
+            if len(boxes) > 0:
+                img = self.light_classifier.mark_up(boxes,cv_image)
+                self.__create_training_data(cl_state,img)
 
             return cl_state
 
