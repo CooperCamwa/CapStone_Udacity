@@ -16,7 +16,7 @@ import os
 
 from scipy import spatial
 
-STATE_COUNT_THRESHOLD = 2
+STATE_COUNT_THRESHOLD = 1
 
 class TLDetector(object):
     def __init__(self):
@@ -122,7 +122,9 @@ class TLDetector(object):
         of times till we start using it. Otherwise the previous stable state is
         used.
         '''
-        
+
+        #self.state = state
+
         if self.state != state:
             self.state_count = 0
             self.state = state

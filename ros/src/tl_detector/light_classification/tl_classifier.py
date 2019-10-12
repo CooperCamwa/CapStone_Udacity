@@ -94,9 +94,16 @@ class TLClassifier(object):
     def mark_up(self,boxes,image):
 
         for det in boxes:
+            
             box,cl = det
             bb = to_bb(box)
-            draw_bb(image,bb,col=(255,0,0),th=2)
+
+            if cl == 1:
+                draw_bb(image,bb,col=(0,255,0),th=4)
+            elif cl == 2:
+                draw_bb(image,bb,col=(255,255,0),th=4)
+            elif cl == 3: 
+                draw_bb(image,bb,col=(0,0,255),th=4)
 
         return image   
 

@@ -134,7 +134,7 @@ class WaypointUpdater(object):
         
     def traffic_cb(self, msg):
         self.stopline_idx = msg.data
-        #rospy.logerr("waypoint_updater: way point index %s ",self.stopline_idx)
+        rospy.logerr("waypoint_updater: way point index %s ",self.stopline_idx)
         
     # def obstacle_cb(self, msg):
     #     self.obstacle_idx = msg
